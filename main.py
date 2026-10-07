@@ -1,5 +1,6 @@
 import getpass
 import auth 
+import crypto_utils
 
 def add(service, username, password):
     ## Enter this service into the master password database with associated credentials 
@@ -80,7 +81,7 @@ def main():
                 service = input("Enter platform/application name: ")
                 username = input(f"Enter username for {service}: ").strip()
                 password = getpass.getpass(f"Enter password for {service}: ")
-                added = add(service, username, password)
+                added = crypto_utils.add_credentials(service, username, password)
                 if (added == True):
                     print("f Entry successful for {service}.")
                 else:
@@ -88,11 +89,12 @@ def main():
 
             elif (goal == "2"):
                 service = input("Enter platform/application name: ")
-                retrieved = retrieve(service) ## This method will print the credentials 
+                creds = crypto_utils.search_credentials(service)
+                print(creds)
 
             elif (goal == "3"):
                 service = input("Enter platform/application name: ")
-                deleted = delete(service)
+                deleted = crypto_utils.delete_entry(service)
                 if (deleted == True):
                     print(f"Deletion successful for {service}.")
                 else:
@@ -101,6 +103,12 @@ def main():
             elif (goal == "4"):
                 service = input("Enter platform/application name: ")
                 edited_password = getpass.getpass(f"Enter updated password for {service}")
+                edited = crypto_utils.edit_entry(service, username, edited_password)
+
+                if (edited == True):
+                    print(f"Edit successful for {service}.")
+                else:
+                    print(f"Edit unsuccessful for {service}.")
 
 ## Should I add an element that basically allows it to re-loop? So they can enter mutliple commands, bascially? 
 

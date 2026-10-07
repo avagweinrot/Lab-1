@@ -38,6 +38,7 @@ def create_master_table():
 	con.commit()
 	con.close()
 
+# make this table for each master password user
 def create_table():
 	con = sqlite3.connect("storage.db")
 	cur = con.cursor()
@@ -100,7 +101,10 @@ def search_credentials(service):
 	creds = cur.fetchone()
 	con.close()
 
-	return creds
+	if creds:
+		return creds
+	else:
+		return "Error: unsuccessful search for service."
 
 # Edits password given a new password
 def edit_entry(service, username, new_password):
@@ -125,11 +129,3 @@ def delete_entry(service, username):
 	cur.execute("DELETE FROM user_credentials WHERE ServiceIdx = ? AND UsernameIdx = ?", (service_idx, username_idx))
 	con.commit()
 	con.close()
-
-create_table()
-add_credentials("Hello", "jo", "password1234")
-print(search_credentials("Hello"))
-edit_entry("Hello", "jo", "password5678")
-print(search_credentials("Hello"))
-delete_entry("Hello", "jo")
-print(search_credentials("Hello"))
