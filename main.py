@@ -9,7 +9,7 @@ def main():
         action = input("Invalid input. \n1) Register, \n2) Login: ").strip()
     
     if action == "1":
-        username = input("Enter username: ").strip()
+        username = input("Enter username: ").strip().lower()
         password = getpass.getpass("Enter password, at least 12 characters in length with at least 1 number and special character: ")
         if len(password) < 12:
             password = getpass.getpass("Password must be at least 12 characters. Enter new password: ")
@@ -28,7 +28,7 @@ def main():
             print("Registration successful.")
    
     elif action == "2":
-        username = input("Enter username: ").strip()
+        username = input("Enter username: ").strip().lower()
         password = getpass.getpass("Enter password: ")
         count = 1
        
@@ -41,7 +41,7 @@ def main():
             print("Invalid username or password.")
 
             while (count < 3):
-                username = input("Enter username: ").strip()
+                username = input("Enter username: ").strip().lower()
                 password = getpass.getpass("Enter password: ")
                 count += 1
                 ## Call the appropriate methods for verifying username and password, make sure these variables get updated

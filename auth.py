@@ -1,6 +1,14 @@
+# auth.py
+# Proofread by Claude for syntax
+# Outside sources used: 
+## https://security.stackexchange.com/questions/11221/how-big-should-salt-be
+## https://security.stackexchange.com/questions/110084/parameters-for-pbkdf2-for-password-hashing
+## https://stackoverflow.com/questions/7585435/how-to-convert-string-to-bytes-in-python-3
+
 import hashlib
 import os
 import crypto_utils 
+import sqlite3
 
 # SETUP
 def build_salt(username):
@@ -11,15 +19,16 @@ def hash_password(password, salt):
     password_byte = password.encode() 
     return (hashlib.pbkdf2_hmac("sha-256", password_byte, salt, 600_000)) 
 
-def get_salt(username):
-    ## Retrieve and return the salt value for the given username (stored with username during registration) - this relies on database structure
-    pass 
-
 # VERIFICATION 
 def is_username(username):
-    ## Write code to check if this username exists in the database
-    ## Return True if yes, False otherwise
-    pass
+    user = username.strip().lower()
+    connection = sqlite3.connect("storage.db")
+    row = connection.execute("SELECT 1 FROM master_credentials WHERE username = ?", user).fetchone()
+    connection.close()
+    if row:
+        return True
+    else:
+        return False 
 
 
 def is_password(username, password):
