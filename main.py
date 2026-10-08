@@ -2,26 +2,6 @@ import getpass
 import auth 
 import crypto_utils
 
-def add(service, username, password):
-    ## Enter this service into the master password database with associated credentials 
-    ## Should call on the encryption methods written in crypto_utils 
-    ## Return True if successful, False otherwise 
-    return False 
-
-def retrieve(service):
-    ## Retrieve the username and password for the given platform/application
-    ## Should call on the decryption methods written in crypto_utils  
-    ## Should print the username and decrypted password associated with the service 
-    pass
-
-def delete(service):
-    ## Remove the entry for the given platform/application from the master password database 
-    ## Return True if successful, False otherwise 
-    return False 
-
-def edit(service, password):
-    pass 
-
 def main():
     action = input("Welcome. \n1) Register, \n2) Login: ").strip()
    
@@ -69,7 +49,7 @@ def main():
                     break
             
             if (count > 4):
-                print("Too many failed login attempts.") ## What do we want to do here?
+                print("Too many failed login attempts.")
        
         if (username_check == True and password_check == True):
             goal = input("Would you like to \n1) Add a new set of credentials, \n2) Retrieve a set of credentials, \n3) Delete a set of credentials, \n or 4) Edit a set of credentials? ").strip()
