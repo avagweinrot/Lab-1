@@ -6,8 +6,6 @@
 ## https://docs.python.org/3/library/sqlite3.html 
 ## https://stackoverflow.com/questions/54899948/how-to-hmac-a-function-in-python 
 
-## need to create fernet object elsewhere?
-
 from cryptography.fernet import Fernet
 import sqlite3
 import hmac
@@ -29,6 +27,7 @@ def create_master_table():
 
 	cur.execute("""
 		CREATE TABLE IF NOT EXISTS master_credentials (
+			UserID INTEGER PRIMARY KEY,
 			Username TEXT PRIMARY KEY NOT NULL,
 			HashedPwd BLOB NOT NULL,
 			Salt BLOB NOT NULL
@@ -45,13 +44,14 @@ def create_table():
 
 	cur.execute("""
 		CREATE TABLE IF NOT EXISTS user_credentials (
-			UserID INTEGER PRIMARY KEY,
+			CredID INTEGER PRIMARY KEY,
+			OwnerID INTEGER NOT NULL REFERENCES master_credentials(UserID),
 			ServiceName BLOB NOT NULL,
 			Username BLOB NOT NULL,
 			Password BLOB NOT NULL,
 			ServiceIdx TEXT NOT NULL,
 			UsernameIdx TEXT NOT NULL,
-			UNIQUE (ServiceName, ServiceIdx, UsernameIdx)
+			UNIQUE (OwnerID, ServiceIdx)
 		)
 	""")
 
@@ -85,10 +85,28 @@ def add_credentials(service, username, password):
 	service_idx = hash_credential(service)
 	username_idx = hash_credential(username)
 
-	cur.execute("INSERT INTO user_credentials (ServiceName, Username, Password, ServiceIdx, UsernameIdx) VALUES (?,?,?,?,?)", (service_encrypted, username_encrypted, password_encrypted, service_idx, username_idx))
+	try:
+		cur.execute("INSERT INTO user_credentials (OwnerID, ServiceName, Username, Password, ServiceIdx, UsernameIdx) VALUES (?,?,?,?,?,?)", (OwnerID, service_encrypted, username_encrypted, password_encrypted, service_idx, username_idx))
+		con.commit()
+		return True
+	except sqlite3.IntegrityError:
+		return False
+	finally:
+		con.close()
 
-	con.commit()
-	con.close()
+def add_master_credentials(username, password, salt):
+	con = sqlite3.connect("storage.db")
+	cur = con.cursor()
+
+	username_idx = hash_credential(username)
+
+	try:
+		cur.execute("INSERT INTO master_credentials (Username, HashedPwd, Salt) VALUES (?,?,?,?,?)", (username_idx, password, salt))
+		con.commit()
+	except sqlite3.IntegrityError:
+		return False
+	finally:
+		con.close()
 
 # Searches credentials by service name
 def search_credentials(service):
@@ -96,7 +114,7 @@ def search_credentials(service):
 	cur = con.cursor()
 
 	service_idx = hash_credential(service)
-
+	
 	cur.execute("SELECT Username, Password FROM user_credentials WHERE ServiceIdx = ?", (service_idx,))
 	creds = cur.fetchone()
 	con.close()
@@ -115,9 +133,14 @@ def edit_entry(service, username, new_password):
 	service_idx = hash_credential(service)
 	username_idx = hash_credential(username)
 
-	cur.execute("UPDATE user_credentials SET Password = ? WHERE ServiceIdx = ? AND UsernameIdx = ?", (new_password_encrypted, service_idx, username_idx))
-	con.commit()
-	con.close()
+	try:
+		cur.execute("UPDATE user_credentials SET Password = ? WHERE ServiceIdx = ? AND UsernameIdx = ?", (new_password_encrypted, service_idx, username_idx))
+		con.commit()
+		return True
+	except sqlite3.IntegrityError:
+		return False
+	finally:
+		con.close()
 
 def delete_entry(service, username):
 	con = sqlite3.connect("storage.db")
@@ -125,7 +148,12 @@ def delete_entry(service, username):
 
 	service_idx = hash_credential(service)
 	username_idx = hash_credential(username)
-	
-	cur.execute("DELETE FROM user_credentials WHERE ServiceIdx = ? AND UsernameIdx = ?", (service_idx, username_idx))
-	con.commit()
-	con.close()
+
+	try:
+		cur.execute("DELETE FROM user_credentials WHERE ServiceIdx = ? AND UsernameIdx = ?", (service_idx, username_idx))
+		con.commit()
+		return True
+	except sqlite3.IntegrityError:
+		return False
+	finally:
+		con.close()
