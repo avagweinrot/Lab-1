@@ -1,3 +1,8 @@
+# main.py
+# Proofread by Claude for syntax
+# Outside sources used: 
+## https://stackoverflow.com/questions/9202224/getting-a-hidden-password-input
+
 import getpass
 import auth 
 import crypto_utils
@@ -24,7 +29,7 @@ def main():
         if password == check:
             salt = auth.build_salt()
             hashed_password = auth.hash_password(password, salt)
-            ## Call method to store hashed password with username in database 
+            crypto_utils.add_master_credentials(username, hashed_password, salt)
             print("Registration successful.")
    
     elif action == "2":
