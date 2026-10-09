@@ -10,7 +10,6 @@ from cryptography.fernet import Fernet
 import sqlite3
 import hmac
 import hashlib
-import secrets
 import os
 
 KEY_FILE = "secret.key"

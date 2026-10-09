@@ -28,7 +28,7 @@ def hash_password(password, salt):
 def is_username(username):
     user = username.strip().lower()
     connection = sqlite3.connect("storage.db")
-    row = connection.execute("SELECT 1 FROM master_credentials WHERE username = ?", user).fetchone()
+    row = connection.execute("SELECT 1 FROM master_credentials WHERE Username = ?", (user,)).fetchone()
     connection.close()
     if row:
         return True
@@ -46,7 +46,7 @@ def is_password(username, password):
     password_byte = password.encode()
 
     connection = sqlite3.connect("storage.db")
-    row = connection.execute("SELECT HashedPwd FROM master_credentials WHERE username = ?", user).fetchone()
+    row = connection.execute("SELECT HashedPwd FROM master_credentials WHERE Username = ?", (user,)).fetchone()
     connection.close()
 
     hashed = row[0]
@@ -60,7 +60,7 @@ def is_password(username, password):
 def get_salt(username):
     user = username.strip().lower()
     connection = sqlite3.connect("storage.db")
-    row = connection.execute("SELECT Salt FROM master_credentials WHERE username = ?", user).fetchone()
+    row = connection.execute("SELECT Salt FROM master_credentials WHERE Username = ?", (user,)).fetchone()
     connection.close()
     if row:
         return row[0]
