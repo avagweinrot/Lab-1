@@ -1,3 +1,5 @@
 secret.key
 idx.key
 storage.db
+.venv
+__pycache__

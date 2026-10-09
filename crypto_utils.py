@@ -74,13 +74,13 @@ def create_table():
 	con.close()
 
 # Encrypts data passed through and returns a Fernet token 
-def encrypt_credential(data):
+def encrypt_credential(f,data):
 	encoded = data.encode()
 	token = f.encrypt(encoded)
 	return token 
 	
 # Decrypts token passed through and returns original message
-def decrypt_credential(token):
+def decrypt_credential(f,token):
 	message = f.decrypt(token)
 	return message.decode()
 
@@ -91,13 +91,13 @@ def hash_credential(data):
 	return hmac.new(idx_key, normalized.encode(), hashlib.sha256).hexdigest()
 
 # Adds credentials to database
-def add_credentials(owner_id, service, username, password):
+def add_credentials(f,owner_id, service, username, password):
 	con = get_connection()
 	cur = con.cursor()
 
-	service_encrypted = encrypt_credential(service)
-	username_encrypted = encrypt_credential(username)
-	password_encrypted = encrypt_credential(password)
+	service_encrypted = encrypt_credential(f,service)
+	username_encrypted = encrypt_credential(f,username)
+	password_encrypted = encrypt_credential(f,password)
 	service_idx = hash_credential(service)
 	username_idx = hash_credential(username)
 
@@ -126,7 +126,7 @@ def add_master_credentials(username, password, salt):
 		con.close()
 
 # Searches credentials by service name
-def search_credentials(owner_id, service):
+def search_credentials(f,owner_id, service):
 	con = get_connection()
 	cur = con.cursor()
 
@@ -137,16 +137,16 @@ def search_credentials(owner_id, service):
 	con.close()
 
 	if creds:
-		return decrypt_credential(creds[0]), decrypt_credential(creds[1])
+		return decrypt_credential(f,creds[0]), decrypt_credential(f,creds[1])
 	else:
-		return "Error: unsuccessful search for service."
+		return None
 
 # Edits password given a new password
-def edit_entry(owner_id, service, username, new_password):
+def edit_entry(f,owner_id, service, username, new_password):
 	con = get_connection()
 	cur = con.cursor()
 
-	new_password_encrypted = encrypt_credential(new_password)
+	new_password_encrypted = encrypt_credential(f,new_password)
 	service_idx = hash_credential(service)
 	username_idx = hash_credential(username)
 
@@ -159,15 +159,14 @@ def edit_entry(owner_id, service, username, new_password):
 	finally:
 		con.close()
 
-def delete_entry(owner_id, service, username):
+def delete_entry(owner_id, service):
 	con = get_connection()
 	cur = con.cursor()
 
 	service_idx = hash_credential(service)
-	username_idx = hash_credential(username)
 
 	try:
-		cur.execute("DELETE FROM user_credentials WHERE OwnerID = ? AND ServiceIdx = ? AND UsernameIdx = ?", (owner_id, service_idx, username_idx))
+		cur.execute("DELETE FROM user_credentials WHERE OwnerID = ? AND ServiceIdx = ?", (owner_id, service_idx))
 		con.commit()
 		return cur.rowcount > 0
 	except sqlite3.IntegrityError:

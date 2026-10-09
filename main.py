@@ -70,34 +70,36 @@ def main():
                     logged_in = True
                 if (logged_in): 
                     break
+                print("Invalid username or password.")
             
             if (count > 4):
                 print("Too many failed login attempts.")
        
         if (logged_in):
+            owner_id = auth.get_owner_id(username)
             goal = input("Would you like to \n1) Add a new set of credentials \n2) Retrieve a set of credentials \n3) Delete a set of credentials \n or 4) Edit a set of credentials\n").strip()
            
-            while (goal != "1" or goal != "2" or goal != "3"):
+            while (goal != "1" and goal != "2" and goal != "3" and goal != "4"):
                 goal = input("Invalid input. \n1) Add \n2) Retrieve \n3) Delete\n").strip()
             
             if (goal == "1"):
                 service = input("Enter platform/application name: ")
                 username = input(f"Enter username for {service}: ").strip()
                 password = getpass.getpass(f"Enter password for {service}: ")
-                added = crypto_utils.add_credentials(service, username, password)
+                added = crypto_utils.add_credentials(file,owner_id, service, username, password)
                 if (added == True):
-                    print("f Entry successful for {service}.")
+                    print(f"Entry successful for {service}.")
                 else:
-                    print("f Entry unsuccessful for {service}.")
+                    print(f"Entry unsuccessful for {service}.")
 
             elif (goal == "2"):
                 service = input("Enter platform/application name: ")
-                creds = crypto_utils.search_credentials(service)
+                creds = crypto_utils.search_credentials(file,owner_id, service)
                 print(creds)
 
             elif (goal == "3"):
                 service = input("Enter platform/application name: ")
-                deleted = crypto_utils.delete_entry(service)
+                deleted = crypto_utils.delete_entry(owner_id, service)
                 if (deleted == True):
                     print(f"Deletion successful for {service}.")
                 else:
@@ -105,13 +107,17 @@ def main():
 
             elif (goal == "4"):
                 service = input("Enter platform/application name: ")
-                edited_password = getpass.getpass(f"Enter updated password for {service}")
-                edited = crypto_utils.edit_entry(service, username, edited_password)
-
-                if (edited == True):
-                    print(f"Edit successful for {service}.")
+                if crypto_utils.search_credentials(file, owner_id, service) is None:
+                    print(f"No credentials found for {service}.")
                 else:
-                    print(f"Edit unsuccessful for {service}.")
+                    username = input(f"Enter username for {service}: ").strip()
+                    edited_password = getpass.getpass(f"Enter updated password for {service}")
+                    edited = crypto_utils.edit_entry(file, owner_id, service, username, edited_password)
+
+                    if (edited == True):
+                        print(f"Edit successful for {service}.")
+                    else:
+                        print(f"Edit unsuccessful for {service}.")
 
 if __name__ == "__main__":
     initialize_database()

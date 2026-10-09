@@ -7,8 +7,6 @@
 ## https://sqreen.github.io/DevelopersSecurityBestPractices/timing-attack/python
 ## https://news.ycombinator.com/item?id=11119154
 
-
-
 import hashlib
 import os
 import crypto_utils 
@@ -26,7 +24,7 @@ def hash_password(password, salt):
 
 # VERIFICATION 
 def is_username(username):
-    user = username.strip().lower()
+    user = crypto_utils.hash_credential(username)
     connection = sqlite3.connect("storage.db")
     row = connection.execute("SELECT 1 FROM master_credentials WHERE Username = ?", (user,)).fetchone()
     connection.close()
@@ -41,13 +39,17 @@ def is_password(username, password):
     ## Will need to call get_salt to get the salt value stored with that username 
     ## Will need to hash the entered password and the retrieved salt and check if it matches the stored password
     ## Return True if yes, False otherwise 
-    user = username.strip().lower()
+    user = crypto_utils.hash_credential(username)
     salt = get_salt(username)
+    if salt is None:
+        return False
     password_byte = password.encode()
 
     connection = sqlite3.connect("storage.db")
     row = connection.execute("SELECT HashedPwd FROM master_credentials WHERE Username = ?", (user,)).fetchone()
     connection.close()
+    if row is None:
+        return False
 
     hashed = row[0]
     login_attempt = hashlib.pbkdf2_hmac("sha256", password_byte, salt, 600_000)
@@ -58,9 +60,19 @@ def is_password(username, password):
         return False 
 
 def get_salt(username):
-    user = username.strip().lower()
+    user = crypto_utils.hash_credential(username)
     connection = sqlite3.connect("storage.db")
     row = connection.execute("SELECT Salt FROM master_credentials WHERE Username = ?", (user,)).fetchone()
     connection.close()
     if row:
         return row[0]
+    return None
+
+def get_owner_id(username):
+    user = crypto_utils.hash_credential(username)
+    connection = sqlite3.connect("storage.db")
+    row = connection.execute("SELECT UserID FROM master_credentials WHERE Username = ?", (user,)).fetchone()
+    connection.close()
+    if row:
+        return row[0]
+    return None
