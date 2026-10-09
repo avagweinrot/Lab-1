@@ -5,6 +5,8 @@
 ## https://security.stackexchange.com/questions/110084/parameters-for-pbkdf2-for-password-hashing
 ## https://stackoverflow.com/questions/7585435/how-to-convert-string-to-bytes-in-python-3
 ## https://sqreen.github.io/DevelopersSecurityBestPractices/timing-attack/python
+## https://news.ycombinator.com/item?id=11119154
+
 
 
 import hashlib
@@ -14,13 +16,13 @@ import sqlite3
 import hmac
 
 # SETUP
-def build_salt(username):
+def build_salt():
     salt = os.urandom(32)
     return salt 
 
 def hash_password(password, salt):
     password_byte = password.encode() 
-    return (hashlib.pbkdf2_hmac("sha-256", password_byte, salt, 600_000)) 
+    return (hashlib.pbkdf2_hmac("sha256", password_byte, salt, 600_000)) 
 
 # VERIFICATION 
 def is_username(username):
@@ -48,7 +50,7 @@ def is_password(username, password):
     connection.close()
 
     hashed = row[0]
-    login_attempt = hashlib.pbkdf2_hmac("sha-256", password_byte, salt, 600_000)
+    login_attempt = hashlib.pbkdf2_hmac("sha256", password_byte, salt, 600_000)
 
     if (hmac.compare_digest(hashed, login_attempt) == True):
         return True

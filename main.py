@@ -6,26 +6,38 @@
 import getpass
 import auth 
 import crypto_utils
+from cryptography.fernet import Fernet
+
+def initialize_database():
+   crypto_utils.create_master_table()
+   crypto_utils.create_table()
 
 def main():
-    action = input("Welcome. \n1) Register, \n2) Login: ").strip()
+    file = Fernet(crypto_utils.generate_symmetric_key())
+
+    action = input("Welcome. \n0) Exit \n1) Register \n2) Login\n").strip()
+
+    if action == "0":
+        print("Goodbye")
+        return
    
-    while (action != "1" or action != "2"):
-        action = input("Invalid input. \n1) Register, \n2) Login: ").strip()
+    while (action != "1" and action != "2"):
+        action = input("Invalid input. \n0) Exit \n1) Register \n2) Login\n").strip()
     
     if action == "1":
         username = input("Enter username: ").strip().lower()
         password = getpass.getpass("Enter password, at least 12 characters in length with at least 1 number and special character: ")
         if len(password) < 12:
-            password = getpass.getpass("Password must be at least 12 characters. Enter new password: ")
-        elif not any (c.isdigit() for c in password):
-            password = getpass.getpass("Password must contain at least 1 number. Enter new password: ")
-        elif not any (not c.isalnim() and not c.isspace() for c in password):
+            password = getpass.getpass("Password must be at least 12 characters.\nEnter new password: ")
+        if not any (c.isdigit() for c in password):
+            password = getpass.getpass("Password must contain at least 1 number.\nEnter new password: ")
+        if not any (not c.isalnum() and not c.isspace() for c in password):
             password = getpass.getpass("Password must contain at least 1 special character. Enter new password: ")
         
         check = getpass.getpass("Reenter password: ")
         while (password != check):
-            check = print("Passwords do not match. Please reenter password: ")
+            check = getpass.getpass("Passwords do not match.\nPlease reenter password: ")
+        
         if password == check:
             salt = auth.build_salt()
             hashed_password = auth.hash_password(password, salt)
@@ -40,7 +52,10 @@ def main():
         username_check = False 
         password_check = False 
         logged_in = False 
-        ## Call the appropriate methods from auth.py for verifying username and password, make sure these variables get updated 
+        username_check = auth.is_username(username)
+        password_check = auth.is_password(username, password)
+        if (username_check and password_check):
+            logged_in = True
         
         if (username_check == False or password_check == False):
             print("Invalid username or password.")
@@ -49,18 +64,21 @@ def main():
                 username = input("Enter username: ").strip().lower()
                 password = getpass.getpass("Enter password: ")
                 count += 1
-                ## Call the appropriate methods for verifying username and password, make sure these variables get updated
-                if (username_check == True and password_check == True): 
+                username_check = auth.is_username(username)
+                password_check = auth.is_password(username, password)
+                if (username_check and password_check):
+                    logged_in = True
+                if (logged_in): 
                     break
             
             if (count > 4):
                 print("Too many failed login attempts.")
        
-        if (username_check == True and password_check == True):
-            goal = input("Would you like to \n1) Add a new set of credentials, \n2) Retrieve a set of credentials, \n3) Delete a set of credentials, \n or 4) Edit a set of credentials? ").strip()
+        if (logged_in):
+            goal = input("Would you like to \n1) Add a new set of credentials \n2) Retrieve a set of credentials \n3) Delete a set of credentials \n or 4) Edit a set of credentials\n").strip()
            
             while (goal != "1" or goal != "2" or goal != "3"):
-                goal = input("Invalid input. \n1) Add, \n2) Retrieve, \n3) Delete: ").strip()
+                goal = input("Invalid input. \n1) Add \n2) Retrieve \n3) Delete\n").strip()
             
             if (goal == "1"):
                 service = input("Enter platform/application name: ")
@@ -95,6 +113,8 @@ def main():
                 else:
                     print(f"Edit unsuccessful for {service}.")
 
+if __name__ == "__main__":
+    main()
 ## Should I add an element that basically allows it to re-loop? So they can enter mutliple commands, bascially? 
 
 
