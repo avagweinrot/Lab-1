@@ -114,6 +114,7 @@ def main():
                     print(f"Edit unsuccessful for {service}.")
 
 if __name__ == "__main__":
+    initialize_database()
     main()
 ## Should I add an element that basically allows it to re-loop? So they can enter mutliple commands, bascially? 
 
