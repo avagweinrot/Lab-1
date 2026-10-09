@@ -11,24 +11,40 @@ import sqlite3
 import hmac
 import hashlib
 import secrets
+import os
+
+KEY_FILE = "secret.key"
+IDX_KEY_FILE = "idx.key"
 
 # Generates fresh fernet key
 # Must be kept some place safe so that a) user can decrypt messages and b) attackers can't get access to it
 def generate_symmetric_key():
-	return Fernet.generate_key()
+	if not os.path.exists(KEY_FILE):
+		with open(KEY_FILE, "wb") as f:
+			f.write(Fernet.generate_key())
+	with open(KEY_FILE, "rb") as f:
+		return f.read()
 
-key = generate_symmetric_key()
-f = Fernet(key)
-idx_key = secrets.token_bytes(32)
+def generate_idx_key():
+	if not os.path.exists(IDX_KEY_FILE):
+		with open(IDX_KEY_FILE, "wb") as f:
+			f.write(Fernet.generate_key())
+	with open(IDX_KEY_FILE, "rb") as f:
+		return f.read()
 
-def create_master_table():
+def get_connection():
 	con = sqlite3.connect("storage.db")
+	con.execute("PRAGMA foreign_keys = ON")
+	return con
+		
+def create_master_table():
+	con = get_connection()
 	cur = con.cursor()
 
 	cur.execute("""
 		CREATE TABLE IF NOT EXISTS master_credentials (
 			UserID INTEGER PRIMARY KEY,
-			Username TEXT PRIMARY KEY NOT NULL,
+			Username TEXT UNIQUE NOT NULL,
 			HashedPwd BLOB NOT NULL,
 			Salt BLOB NOT NULL
 		)
@@ -39,7 +55,7 @@ def create_master_table():
 
 # make this table for each master password user
 def create_table():
-	con = sqlite3.connect("storage.db")
+	con = get_connection()
 	cur = con.cursor()
 
 	cur.execute("""
@@ -72,11 +88,12 @@ def decrypt_credential(token):
 # Hashes credentials to establish a blind index, so that service and username are not exposed in database
 def hash_credential(data):
 	normalized = data.strip().lower()
+	idx_key = generate_idx_key()
 	return hmac.new(idx_key, normalized.encode(), hashlib.sha256).hexdigest()
 
 # Adds credentials to database
-def add_credentials(service, username, password):
-	con = sqlite3.connect("storage.db")
+def add_credentials(owner_id, service, username, password):
+	con = get_connection()
 	cur = con.cursor()
 
 	service_encrypted = encrypt_credential(service)
@@ -86,7 +103,7 @@ def add_credentials(service, username, password):
 	username_idx = hash_credential(username)
 
 	try:
-		cur.execute("INSERT INTO user_credentials (OwnerID, ServiceName, Username, Password, ServiceIdx, UsernameIdx) VALUES (?,?,?,?,?,?)", (OwnerID, service_encrypted, username_encrypted, password_encrypted, service_idx, username_idx))
+		cur.execute("INSERT INTO user_credentials (OwnerID, ServiceName, Username, Password, ServiceIdx, UsernameIdx) VALUES (?,?,?,?,?,?)", (owner_id, service_encrypted, username_encrypted, password_encrypted, service_idx, username_idx))
 		con.commit()
 		return True
 	except sqlite3.IntegrityError:
@@ -95,38 +112,39 @@ def add_credentials(service, username, password):
 		con.close()
 
 def add_master_credentials(username, password, salt):
-	con = sqlite3.connect("storage.db")
+	con = get_connection()
 	cur = con.cursor()
 
 	username_idx = hash_credential(username)
 
 	try:
-		cur.execute("INSERT INTO master_credentials (Username, HashedPwd, Salt) VALUES (?,?,?,?,?)", (username_idx, password, salt))
+		cur.execute("INSERT INTO master_credentials (Username, HashedPwd, Salt) VALUES (?,?,?)", (username_idx, password, salt))
 		con.commit()
+		return True
 	except sqlite3.IntegrityError:
 		return False
 	finally:
 		con.close()
 
 # Searches credentials by service name
-def search_credentials(service):
-	con = sqlite3.connect("storage.db")
+def search_credentials(owner_id, service):
+	con = get_connection()
 	cur = con.cursor()
 
 	service_idx = hash_credential(service)
 	
-	cur.execute("SELECT Username, Password FROM user_credentials WHERE ServiceIdx = ?", (service_idx,))
+	cur.execute("SELECT Username, Password FROM user_credentials WHERE OwnerID = ? AND ServiceIdx = ?", (owner_id, service_idx))
 	creds = cur.fetchone()
 	con.close()
 
 	if creds:
-		return creds
+		return decrypt_credential(creds[0]), decrypt_credential(creds[1])
 	else:
 		return "Error: unsuccessful search for service."
 
 # Edits password given a new password
-def edit_entry(service, username, new_password):
-	con = sqlite3.connect("storage.db")
+def edit_entry(owner_id, service, username, new_password):
+	con = get_connection()
 	cur = con.cursor()
 
 	new_password_encrypted = encrypt_credential(new_password)
@@ -134,25 +152,25 @@ def edit_entry(service, username, new_password):
 	username_idx = hash_credential(username)
 
 	try:
-		cur.execute("UPDATE user_credentials SET Password = ? WHERE ServiceIdx = ? AND UsernameIdx = ?", (new_password_encrypted, service_idx, username_idx))
+		cur.execute("UPDATE user_credentials SET Password = ? WHERE OwnerID = ? AND ServiceIdx = ? AND UsernameIdx = ?", (new_password_encrypted, owner_id, service_idx, username_idx))
 		con.commit()
-		return True
+		return cur.rowcount > 0
 	except sqlite3.IntegrityError:
 		return False
 	finally:
 		con.close()
 
-def delete_entry(service, username):
-	con = sqlite3.connect("storage.db")
+def delete_entry(owner_id, service, username):
+	con = get_connection()
 	cur = con.cursor()
 
 	service_idx = hash_credential(service)
 	username_idx = hash_credential(username)
 
 	try:
-		cur.execute("DELETE FROM user_credentials WHERE ServiceIdx = ? AND UsernameIdx = ?", (service_idx, username_idx))
+		cur.execute("DELETE FROM user_credentials WHERE OwnerID = ? AND ServiceIdx = ? AND UsernameIdx = ?", (owner_id, service_idx, username_idx))
 		con.commit()
-		return True
+		return cur.rowcount > 0
 	except sqlite3.IntegrityError:
 		return False
 	finally:
