@@ -88,7 +88,7 @@ def decrypt_credential(token):
 # Hashes credentials to establish a blind index, so that service and username are not exposed in database
 def hash_credential(data):
 	normalized = data.strip().lower()
-	idx_key = generate_idx_key
+	idx_key = generate_idx_key()
 	return hmac.new(idx_key, normalized.encode(), hashlib.sha256).hexdigest()
 
 # Adds credentials to database
