@@ -1,5 +1,6 @@
 # crypto_utils.py
 # Proofread by Claude for syntax
+# Utilized Claude to help provide clarity on what error messages meant and to support structural decisions
 # Outside sources used: 
 ## https://cryptography.io/en/latest/ 
 ## https://cryptography.io/en/latest/fernet/
